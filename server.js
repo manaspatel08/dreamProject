@@ -1,26 +1,39 @@
-const express = require("express");
-const app = express();
+// const express = require("express");
+const path = require("path");
 const http = require("http");
 const { Server } = require("socket.io");
+const cors = require("cors");
 const ACTIONS = require("./src/Actions");
 
+const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Allow all origins (or replace with frontend URL for security)
+    methods: ["GET", "POST"],
+  },
+});
+
+app.use(cors());
+app.use(express.static(path.join(__dirname, "build")));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "build", "index.html"));
+});
 
 const userSocketMap = {};
+
 function getAllConnectedClients(roomId) {
   return Array.from(io.sockets.adapter.rooms.get(roomId) || []).map(
-    (socketId) => {
-      return {
-        socketId,
-        username: userSocketMap[socketId],
-      };
-    }
+    (socketId) => ({
+      socketId,
+      username: userSocketMap[socketId],
+    })
   );
 }
 
 io.on("connection", (socket) => {
-  console.log("socket connected", socket.id);
+  console.log("Socket connected", socket.id);
 
   socket.on(ACTIONS.JOIN, ({ roomId, username }) => {
     userSocketMap[socket.id] = username;
@@ -57,4 +70,4 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Listening on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

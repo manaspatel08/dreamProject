@@ -9,6 +9,7 @@ import ACTIONS from "../Actions";
 
 const Editor = ({ socketRef, roomId, selectedLanguage, onCodeChange }) => {
   const editorRef = useRef(null);
+
   useEffect(() => {
     async function init() {
       editorRef.current = Codemirror.fromTextArea(
@@ -23,7 +24,6 @@ const Editor = ({ socketRef, roomId, selectedLanguage, onCodeChange }) => {
       );
 
       editorRef.current.on("change", (instance, changes) => {
-        // console.log('changes', changes);
         const { origin } = changes;
         const code = instance.getValue();
         onCodeChange(code);
@@ -34,15 +34,15 @@ const Editor = ({ socketRef, roomId, selectedLanguage, onCodeChange }) => {
             selectedLanguage,
           });
         }
-        // console.log(code);
       });
     }
     init();
-  }, []);
+  }, [onCodeChange, roomId, selectedLanguage, socketRef]); // ✅ Added dependencies
 
   useEffect(() => {
-    if (socketRef.current) {
-      socketRef.current.on(ACTIONS.CODE_CHANGE, ({ code }) => {
+    const socket = socketRef.current;
+    if (socket) {
+      socket.on(ACTIONS.CODE_CHANGE, ({ code }) => {
         if (code !== null) {
           editorRef.current.setValue(code);
         }
@@ -50,9 +50,11 @@ const Editor = ({ socketRef, roomId, selectedLanguage, onCodeChange }) => {
     }
 
     return () => {
-      socketRef.current.off(ACTIONS.CODE_CHANGE);
+      if (socket) {
+        socket.off(ACTIONS.CODE_CHANGE);
+      }
     };
-  }, [socketRef.current]);
+  }, [socketRef]); // ✅ Updated dependency array
 
   return <textarea id="realtimeEditor"></textarea>;
 };
